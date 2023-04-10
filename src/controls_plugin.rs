@@ -14,6 +14,7 @@ pub struct MainCamera {}
 struct ApplyMouseMovements(bool);
 
 pub struct ControlsPlugin;
+
 impl Plugin for ControlsPlugin {
     fn build(&self, app: &mut App) {
         app.add_system(camera_controls)

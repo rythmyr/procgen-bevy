@@ -10,7 +10,9 @@ use crate::controls_plugin::{ControlsPlugin, MainCamera};
 use noise::{NoiseFn, Perlin};
 use rand::prelude::*;
 
+mod chunks_plugin;
 mod controls_plugin;
+mod player;
 
 const CHUNK_SIZE: u8 = 16u8;
 const NUM_CHUNKS: u8 = 4u8;
@@ -110,5 +112,13 @@ fn startup_system(
         MainCamera {},
     ));
 
-    commands.spawn(DirectionalLightBundle { ..default() });
+    commands.spawn(DirectionalLightBundle {
+        transform: Transform::from_rotation(Quat::from_euler(
+            EulerRot::default(),
+            15.0,
+            30.0,
+            35.0,
+        )),
+        ..default()
+    });
 }
