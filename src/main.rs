@@ -77,21 +77,6 @@ fn startup_system(
     let k = 0.0;
     perlin_noise.get([i, j, k]);
 
-    // let cube_handle = meshes.add(Mesh::from(shape::Cube {
-    //     ..Default::default()
-    // }));
-    //
-    // let cube_material_handle = materials.add(StandardMaterial {
-    //     base_color: Color::Rgba {
-    //         red: 0.8,
-    //         green: 0.2,
-    //         blue: 1.0,
-    //         alpha: 1.0,
-    //     },
-    //
-    //     ..Default::default()
-    // });
-
     // for x in 0..NUM_CHUNKS {
     //     for y in 0..NUM_CHUNKS {
     //         for z in 0..NUM_CHUNKS {

@@ -18,28 +18,41 @@ impl Plugin for ChunksPlugin {
 
 fn chunk_load_system(
     players: Query<&Transform, With<Player>>,
-    mut chunks: Query<(&mut Chunk, Entity)>, //
+    chunks: Query<(&Chunk, Entity)>, //
     mut commands: Commands,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
-    let mut total_chunks_unloaded = 0;
     let mut existing_chunks = HashSet::<(isize, isize, isize)>::new();
-    for tuple in chunks.iter_mut() {
-        let (mut chunk, entity) = tuple;
+    for tuple in chunks.iter() {
+        let (chunk, entity) = tuple;
         existing_chunks.insert((chunk.x, chunk.y, chunk.z));
         for player in players.iter() {
             if (chunk.center() - player.translation).length_squared()
                 >= (RENDER_DISTANCE_UNITS * RENDER_DISTANCE_UNITS) as f32
                 && chunk.load_state != LoadState::ShouldUnload
             {
-                chunk.load_state = LoadState::ShouldUnload;
-                total_chunks_unloaded += 1;
+                // NOTE: not really doing anything with the loadstate yet
+                // I'm guessing it'll be really useful when we have saving/loading
                 commands.entity(entity).despawn();
             }
         }
     }
+    let cube_handle = meshes.add(Mesh::from(shape::Cube {
+        ..Default::default()
+    }));
 
-    let mut total_chunks_added = 0;
-    let mut total_chunks_skipped = 0;
+    let cube_material_handle = materials.add(StandardMaterial {
+        base_color: Color::Rgba {
+            red: 0.8,
+            green: 0.2,
+            blue: 1.0,
+            alpha: 1.0,
+        },
+
+        ..Default::default()
+    });
+
     for player in players.iter() {
         let px = player.translation.x.floor() as isize / CHUNK_SIZE;
         let py = player.translation.y.floor() as isize / CHUNK_SIZE;
@@ -58,25 +71,28 @@ fn chunk_load_system(
                         < (RENDER_DISTANCE_UNITS * RENDER_DISTANCE_UNITS) as f32
                         && !existing_chunks.contains(&(x, y, z))
                     {
-                        total_chunks_added += 1;
-                        commands.spawn(Chunk {
-                            x,
-                            y,
-                            z,
-                            load_state: LoadState::ShouldLoad,
-                        });
-                    } else {
-                        total_chunks_skipped += 1;
+                        commands.spawn((
+                            Chunk {
+                                x,
+                                y,
+                                z,
+                                load_state: LoadState::ShouldLoad,
+                            },
+                            PbrBundle {
+                                mesh: cube_handle.clone(),
+                                material: cube_material_handle.clone(),
+                                transform: Transform::from_xyz(
+                                    (x * CHUNK_SIZE) as f32,
+                                    (y * CHUNK_SIZE) as f32,
+                                    (z * CHUNK_SIZE) as f32,
+                                ),
+                                ..default()
+                            },
+                        ));
                     }
                 }
             }
         }
-    }
-    if total_chunks_added != 0 {
-        println!(
-            "{}, {}, -{}",
-            total_chunks_added, total_chunks_skipped, total_chunks_unloaded
-        );
     }
 }
 

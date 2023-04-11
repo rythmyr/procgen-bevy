@@ -64,8 +64,6 @@ fn camera_controls(
 
                 y = y.max(MIN_EULER_X).min(MAX_EULER_X);
 
-                println!("{}, {}, {}", x, y, z);
-
                 let rotation = Quat::from_euler(EulerRot::default(), x, y, z);
                 transform.rotation = rotation;
             }
