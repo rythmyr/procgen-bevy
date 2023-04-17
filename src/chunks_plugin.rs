@@ -1,19 +1,28 @@
 use bevy::{prelude::*, utils::HashSet};
 
+use noise::{NoiseFn, Perlin};
+use rand::Rng;
+
 use crate::player::Player;
 
 const CHUNK_SIZE: isize = 16isize;
-// const BLOCKS_PER_CHUNK: isize = CHUNK_SIZE * CHUNK_SIZE * CHUNK_SIZE;
+// const BLOCKS_PER_CHUNK: usize = (CHUNK_SIZE * CHUNK_SIZE * CHUNK_SIZE) as usize;
 
-const RENDER_DISTANCE_CHUNKS: isize = 45;
+const RENDER_DISTANCE_CHUNKS: isize = 3;
 const RENDER_DISTANCE_UNITS: isize = RENDER_DISTANCE_CHUNKS * CHUNK_SIZE;
 
 pub struct ChunksPlugin;
 
+#[derive(Resource)]
+pub struct PerlinInfo {
+    generator: Perlin,
+}
+
 impl Plugin for ChunksPlugin {
     fn build(&self, app: &mut App) {
         app.add_startup_system(add_resources)
-            .add_system(chunk_load_system);
+            .add_system(chunk_should_load_check)
+            .add_system(generate_chunks);
     }
 }
 
@@ -28,6 +37,13 @@ fn add_resources(
     mut materials: ResMut<Assets<StandardMaterial>>,
     mut commands: Commands,
 ) {
+    let seed: u32 = rand::thread_rng().gen();
+    let perlin: Perlin = Perlin::new(seed);
+
+    let perlin_info = PerlinInfo { generator: perlin };
+
+    commands.insert_resource(perlin_info);
+
     let cube_handle = meshes.add(Mesh::from(shape::Cube {
         ..Default::default()
     }));
@@ -40,19 +56,13 @@ fn add_resources(
             blue: 1.0,
             alpha: 1.0,
         },
-        emissive: Color::Rgba {
-            red: 0.0,
-            green: 1.0,
-            blue: 0.0,
-            alpha: 0.5,
-        },
         ..Default::default()
     });
 
     commands.insert_resource(CubeMaterialHandle(cube_material_handle));
 }
 
-fn chunk_load_system(
+fn chunk_should_load_check(
     players: Query<&Transform, With<Player>>,
     chunks: Query<(&Chunk, Entity)>, //
     mut commands: Commands,
@@ -86,6 +96,8 @@ fn chunk_load_system(
             for y in py - RENDER_DISTANCE_CHUNKS..py + RENDER_DISTANCE_CHUNKS {
                 for z in pz - RENDER_DISTANCE_CHUNKS..pz + RENDER_DISTANCE_CHUNKS {
                     let chunk = Chunk {
+                        generation_state: GenerationState::NotStarted,
+                        // blocks: [0; BLOCKS_PER_CHUNK],
                         x,
                         y,
                         z,
@@ -115,24 +127,57 @@ fn chunk_load_system(
     }
 }
 
-// enum GenerationState {
-//     NotStarted,
-//     Queued,
-//     Generating,
-//     Done,
-// }
+fn generate_chunks(
+    perlin_noise: Res<PerlinInfo>,
+    cube_handle: Res<CubeHandle>,
+    cube_material_handle: Res<CubeMaterialHandle>,
+    mut chunks: Query<&mut Chunk>,
+    mut commands: Commands,
+) {
+    for mut chunk in chunks.iter_mut() {
+        if chunk.generation_state == GenerationState::NotStarted {
+            chunk.generation_state = GenerationState::Generating;
+            for x in 0..CHUNK_SIZE {
+                let fx = x as f64 + (chunk.x as f64 * CHUNK_SIZE as f64);
+                for y in 0..CHUNK_SIZE {
+                    let fy = y as f64 + (chunk.y as f64 * CHUNK_SIZE as f64);
+                    for z in 0..CHUNK_SIZE {
+                        let fz = z as f64 + (chunk.z as f64 * CHUNK_SIZE as f64);
+                        let noise_value =
+                            perlin_noise.generator.get([fx / 16., fy / 16., fz / 16.]);
+                        if noise_value <= 0.0 {
+                            // TODO: we're spawning a bunch of cubes. maybe don't?
+                            // also we're not cleaning any of them up
+                            let bundle = (PbrBundle {
+                                mesh: cube_handle.0.clone(),
+                                material: cube_material_handle.0.clone(),
+                                transform: Transform::from_xyz(fx as f32, fy as f32, fz as f32),
+                                ..default()
+                            },);
+                            commands.spawn(bundle);
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+#[derive(PartialEq)]
+enum GenerationState {
+    NotStarted,
+    Generating,
+}
 
 #[derive(PartialEq)]
 enum LoadState {
     ShouldLoad,
-    // Loaded,
-    ShouldUnload, //
-                  // Unloaded,
+    ShouldUnload,
 }
 
 #[derive(Component)]
 struct Chunk {
-    // generation_state: GenerationState,
+    generation_state: GenerationState,
     load_state: LoadState,
     // blocks: [u8; BLOCKS_PER_CHUNK],
     x: isize,
@@ -143,10 +188,6 @@ struct Chunk {
 fn chunk_to_world_coords(x: isize) -> f32 {
     (x * CHUNK_SIZE) as f32
 }
-
-// fn world_to_chunk_coords(x: f32) -> isize {
-//     (x / CHUNK_SIZE as f32) as isize
-// }
 
 impl Chunk {
     fn center(&self) -> Vec3 {
