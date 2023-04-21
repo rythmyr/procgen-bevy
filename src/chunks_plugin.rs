@@ -93,20 +93,23 @@ fn chunk_should_load_check(
         let pz = player.translation.z.floor() as isize / CHUNK_SIZE;
 
         for x in px - RENDER_DISTANCE_CHUNKS..px + RENDER_DISTANCE_CHUNKS {
+            let cx = (x * CHUNK_SIZE) as f32 + (CHUNK_SIZE / 2) as f32;
             for y in py - RENDER_DISTANCE_CHUNKS..py + RENDER_DISTANCE_CHUNKS {
+                let cy = (y * CHUNK_SIZE) as f32 + (CHUNK_SIZE / 2) as f32;
                 for z in pz - RENDER_DISTANCE_CHUNKS..pz + RENDER_DISTANCE_CHUNKS {
-                    let chunk = Chunk {
-                        generation_state: GenerationState::NotStarted,
-                        // blocks: [0; BLOCKS_PER_CHUNK],
-                        x,
-                        y,
-                        z,
-                        load_state: LoadState::ShouldLoad,
-                    };
-                    if (chunk.center() - player.translation).length_squared()
+                    let cz = (z * CHUNK_SIZE) as f32 + (CHUNK_SIZE / 2) as f32;
+                    if (Vec3::from((cx, cy, cz)) - player.translation).length_squared()
                         < (RENDER_DISTANCE_UNITS * RENDER_DISTANCE_UNITS) as f32
                         && !existing_chunks.contains(&(x, y, z))
                     {
+                        let chunk = Chunk {
+                            generation_state: GenerationState::NotStarted,
+                            // blocks: [0; BLOCKS_PER_CHUNK],
+                            x,
+                            y,
+                            z,
+                            load_state: LoadState::ShouldLoad,
+                        };
                         commands.spawn((
                             chunk,
                             PbrBundle {
