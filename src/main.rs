@@ -19,11 +19,11 @@ mod player;
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
-        .add_plugin(LogDiagnosticsPlugin::default())
-        .add_plugin(FrameTimeDiagnosticsPlugin::default())
-        .add_plugin(ControlsPlugin)
-        .add_plugin(ChunksPlugin)
-        .add_startup_system(startup_system)
+        .add_plugins(LogDiagnosticsPlugin::default())
+        .add_plugins(FrameTimeDiagnosticsPlugin::default())
+        .add_plugins(ControlsPlugin)
+        .add_plugins(ChunksPlugin)
+        .add_systems(Startup, startup_system)
         .run();
 }
 

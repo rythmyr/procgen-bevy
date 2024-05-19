@@ -17,16 +17,16 @@ pub struct ControlsPlugin;
 
 impl Plugin for ControlsPlugin {
     fn build(&self, app: &mut App) {
-        app.add_system(camera_controls)
-            .add_system(close_on_escape)
-            .add_system(cursor_grab_system)
+        app.add_systems(Update, camera_controls)
+            .add_systems(Update, close_on_escape)
+            .add_systems(Update, cursor_grab_system)
             .insert_resource(ApplyMouseMovements(false));
     }
 }
 
 fn cursor_grab_system(
     mut windows: Query<&mut Window>,
-    btn: Res<Input<MouseButton>>,
+    btn: Res<ButtonInput<MouseButton>>,
     mut apply_mouse_movements: ResMut<ApplyMouseMovements>,
 ) {
     let mut window = windows.single_mut();
@@ -45,7 +45,7 @@ fn cursor_grab_system(
 }
 
 fn camera_controls(
-    keys: Res<Input<KeyCode>>,
+    keys: Res<ButtonInput<KeyCode>>,
     mut mouse_events: EventReader<MouseMotion>,
     mut camera: Query<&mut Transform, With<MainCamera>>,
     time: Res<Time>,
@@ -54,7 +54,7 @@ fn camera_controls(
     let transform_result = camera.get_single_mut();
 
     if let Ok(mut transform) = transform_result {
-        for event in mouse_events.iter() {
+        for event in mouse_events.read() {
             if apply_mouse_movements.0 {
                 let dx = event.delta.x;
                 let dy = event.delta.y;
@@ -69,25 +69,25 @@ fn camera_controls(
             }
         }
         let mut move_speed = MOVE_SPEED;
-        if keys.pressed(KeyCode::LShift) {
+        if keys.pressed(KeyCode::ShiftLeft) {
             move_speed *= SHIFTED_MOVE_SPEED_MULTIPLIER;
         }
-        if keys.pressed(KeyCode::W) {
+        if keys.pressed(KeyCode::KeyW) {
             // move camera forward
             let forward = transform.forward();
             transform.translation += forward * time.delta_seconds() * move_speed;
         }
-        if keys.pressed(KeyCode::A) {
+        if keys.pressed(KeyCode::KeyA) {
             // move camera left
             let left = transform.left();
             transform.translation += left * time.delta_seconds() * move_speed;
         }
-        if keys.pressed(KeyCode::S) {
+        if keys.pressed(KeyCode::KeyS) {
             // move camera backward
             let forward = transform.forward();
             transform.translation += forward * time.delta_seconds() * -1. * move_speed;
         }
-        if keys.pressed(KeyCode::D) {
+        if keys.pressed(KeyCode::KeyD) {
             // move camera right
             let left = transform.left();
             transform.translation += left * time.delta_seconds() * -1. * move_speed;
@@ -95,7 +95,7 @@ fn camera_controls(
     }
 }
 
-fn close_on_escape(mut app_exit_events: EventWriter<AppExit>, keys: Res<Input<KeyCode>>) {
+fn close_on_escape(mut app_exit_events: EventWriter<AppExit>, keys: Res<ButtonInput<KeyCode>>) {
     if keys.just_pressed(KeyCode::Escape) {
         app_exit_events.send(AppExit);
     }

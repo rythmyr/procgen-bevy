@@ -20,9 +20,9 @@ pub struct PerlinInfo {
 
 impl Plugin for ChunksPlugin {
     fn build(&self, app: &mut App) {
-        app.add_startup_system(add_resources)
-            .add_system(chunk_should_load_check)
-            .add_system(generate_chunks);
+        app.add_systems(Startup, add_resources)
+            .add_systems(Update, chunk_should_load_check)
+            .add_systems(Update, generate_chunks);
     }
 }
 
@@ -44,7 +44,7 @@ fn add_resources(
 
     commands.insert_resource(perlin_info);
 
-    let cube_handle = meshes.add(Mesh::from(shape::Cube {
+    let cube_handle = meshes.add(Mesh::from(bevy::math::primitives::Cuboid {
         ..Default::default()
     }));
     commands.insert_resource(CubeHandle(cube_handle));
